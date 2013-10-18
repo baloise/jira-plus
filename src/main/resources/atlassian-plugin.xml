@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<atlassian-plugin key="${project.groupId}.${project.artifactId}" name="${project.name}" plugins-version="2">
+  <plugin-info>
+    <description>${project.description}</description>
+    <version>${project.version}</version>
+    <vendor name="${project.organization.name}" url="${project.organization.url}"/>
+    <param name="plugin-icon">images/pluginIcon.png</param>
+    <param name="plugin-logo">images/pluginLogo.png</param>
+  </plugin-info>
+  
+  <xhtml-macro name="jira-plus" class="com.baloise.confluence.JiraPlusMacro" key="jira-plus" icon="/download/resources/${project.groupId}.${project.artifactId}/images/macro-icon.png">
+    	<description>Advanced Jira reporting</description>
+   		<category name="external-content"/>
+    	<parameters>
+    	 	<parameter name="key" type="string" default="" />
+    	</parameters>
+  </xhtml-macro>
+
+  <resource type="i18n" name="i18n" location="jira-plus"/>
+  <resource type="download" name="images/" location="/images"/>
+  
+  <!-- add our web resources -->
+  <web-resource key="jira-plus-resources" name="jira-plus Web Resources">
+    <dependency>com.atlassian.auiplugin:ajs</dependency>
+    <resource type="download" name="jira-plus.css" location="/css/jira-plus.css"/>
+    <resource type="download" name="jira-plus.js" location="/js/jira-plus.js"/>
+    <context>jira-plus</context>
+  </web-resource>
+
+  <component-import key="applicationLinkService" interface="com.atlassian.applinks.api.ApplicationLinkService" />
+  <component-import key="confluence.extra.jira" interface="com.atlassian.confluence.extra.jira.JiraIssuesManager"/>
+  
+</atlassian-plugin>
