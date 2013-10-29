@@ -48,7 +48,8 @@
 		interface="com.atlassian.sal.api.pluginsettings.PluginSettingsFactory" />
 	<component-import key="transactionTemplate"
 		interface="com.atlassian.sal.api.transaction.TransactionTemplate" />
-
+	<component-import key="xhtmlRenderer"
+		interface="com.atlassian.confluence.content.render.xhtml.Renderer" />
 
 	<template-context-item key="applicationPropertiesContextItem"
 		component-ref="applicationProperties" context-key="applicationProperties"

@@ -1,5 +1,7 @@
 package com.baloise.confluence;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -9,6 +11,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
@@ -25,8 +28,11 @@ import com.atlassian.confluence.macro.MacroExecutionException;
 import com.atlassian.confluence.xhtml.api.XhtmlContent;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.sal.api.transaction.TransactionTemplate;
+import com.atlassian.templaterenderer.RenderingException;
+import com.atlassian.templaterenderer.TemplateRenderer;
 import com.baloise.confluence.rest.JiraPlusConfig;
 import com.baloise.confluence.rest.JiraPlusConfigModel;
+import com.atlassian.confluence.content.render.xhtml.Renderer;
 
 public class JiraPlusMacro implements Macro {
 
@@ -34,12 +40,16 @@ public class JiraPlusMacro implements Macro {
 	private ApplicationLinkService applicationLinkService;
 	private PluginSettingsFactory pluginSettingsFactory;
 	private TransactionTemplate transactionTemplate;
+	private Renderer renderer;
+	private TemplateRenderer templateRenderer;
 
-	public JiraPlusMacro(XhtmlContent xhtmlContent, JiraIssuesManager jiraIssuesManager, ApplicationLinkService applicationLinkService, PluginSettingsFactory pluginSettingsFactory, TransactionTemplate transactionTemplate){
+	public JiraPlusMacro(XhtmlContent xhtmlContent, JiraIssuesManager jiraIssuesManager, ApplicationLinkService applicationLinkService, PluginSettingsFactory pluginSettingsFactory, TransactionTemplate transactionTemplate, Renderer renderer, TemplateRenderer templateRenderer){
 		this.jiraIssuesManager = jiraIssuesManager;
 		this.applicationLinkService = applicationLinkService;
 		this.pluginSettingsFactory = pluginSettingsFactory;
 		this.transactionTemplate = transactionTemplate;
+		this.renderer = renderer;
+		this.templateRenderer = templateRenderer;
 	}
 	
 	@Override
@@ -83,26 +93,44 @@ public class JiraPlusMacro implements Macro {
 			builder.append("<b>");
 			render(builder, issue);
 			builder.append("</b>");
-			Random rand = new Random(System.currentTimeMillis()+17);
-			int pos = 10 + rand.nextInt(80);
-			builder.append("<img src='http://www.yarntomato.com/percentbarmaker/button.php?barPosition="+pos+"&leftFill=99FF99&rightFill=FF9999'/><br/>");
 			for (String linkType : links.keySet()) {
 				renderSection(builder, linkType);
 				for (String linkedKey : links.get(linkType)) {
 					render(builder, items.get(linkedKey));
 				}
 			}
+			
+			Map<String, Integer> data = new HashMap<String, Integer>();
+			for (Entry<String, Set<String>> entry : links.entrySet()) {
+				data.put(entry.getKey(), entry.getValue().size());
+			}
+			builder.append(pieChart("", data, context ));
 			 
 		} catch (Exception e) {
 			e.printStackTrace();
 			builder.append(e.getMessage());
 		} 
 		JiraPlusConfigModel config = JiraPlusConfig.loadConfig(transactionTemplate, pluginSettingsFactory);
-		builder.append("<br/>Name: "+config.getName());
+		builder.append("<br/>Name from plugin config : "+config.getName());
+		builder.append("<br/><progress value='50' max='70' ></progress>");
 		builder.append("</p>");
         return builder.toString();
 	}
 
+	
+	String confluenceLink(String href, String text) {
+		return "<ac:link><ri:page ri:content-title=\""+href+"\" /><ac:plain-text-link-body><![CDATA["+text+"]]></ac:plain-text-link-body></ac:link>";
+	}
+	
+	String pieChart(String title, Map<String, Integer> data, ConversionContext conversionContext) throws IOException {
+		StringWriter sw = new StringWriter();
+		Map<String, Object> context = new HashMap<String, Object>();
+		context.put("title", title);
+		context.put("data", data);
+		templateRenderer.render("piechart.vm",context , sw);
+		return renderer.render(sw.toString(), conversionContext);
+	}
+	
 	private void renderSection(StringBuilder builder, String section) {
 		builder.append("<i>");
 		builder.append(section);
@@ -125,6 +153,8 @@ public class JiraPlusMacro implements Macro {
 		builder.append(item.getChildText("summary"));
 		builder.append("<br/>");
 	}
+	
+	
 	
 	
 	
@@ -173,7 +203,6 @@ public class JiraPlusMacro implements Macro {
 		while (it.hasNext()) it.next();
 		return ret;
 	}
-	
 
 	@Override
 	public BodyType getBodyType() {

@@ -1,0 +1,13 @@
+<ac:macro ac:name="chart"><ac:parameter ac:name="title">$title</ac:parameter><ac:parameter ac:name="dataOrientation">vertical</ac:parameter><ac:rich-text-body>
+<table>
+<tbody>
+<tr>
+<th colspan="1">&nbsp;</th>
+<th colspan="1">&nbsp;</th></tr>
+#foreach( $key in $data.keySet() )
+    <tr>
+		<td>$key</td>
+		<td>$data.get($key)</td>
+	</tr>
+#end
+</tbody></table></ac:rich-text-body></ac:macro>
