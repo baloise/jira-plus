@@ -1,14 +1,11 @@
 AJS.toInit(function() {
   
   var baseUrl = AJS.$("meta[name='ajs-base-url']").attr("content");
-  console.log(baseUrl)   
   function populateForm() {
-	console.log(baseUrl + "/rest/jiraplusconfig/1.0/")
     AJS.$.ajax({
       url: baseUrl + "/rest/jiraplusconfig/1.0/",
       dataType: "json",
       success: function(config) {
-    	console.log(config)
         AJS.$("#name").attr("value", config.name);
         AJS.$("#time").attr("value", config.time);
       }
