@@ -1,34 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<atlassian-plugin key="${project.groupId}.${project.artifactId}" name="${project.name}" plugins-version="2">
-  <plugin-info>
-    <description>${project.description}</description>
-    <version>${project.version}</version>
-    <vendor name="${project.organization.name}" url="${project.organization.url}"/>
-    <param name="plugin-icon">images/pluginIcon.png</param>
-    <param name="plugin-logo">images/pluginLogo.png</param>
-  </plugin-info>
-  
-  <xhtml-macro name="jira-plus" class="com.baloise.confluence.JiraPlusMacro" key="jira-plus" icon="/download/resources/${project.groupId}.${project.artifactId}/images/macro-icon.png">
-    	<description>Advanced Jira reporting</description>
-   		<category name="external-content"/>
-    	<parameters>
-    	 	<parameter name="key" type="string" default="" />
-    	</parameters>
-  </xhtml-macro>
+<atlassian-plugin key="${project.groupId}.${project.artifactId}"
+	name="${project.name}" plugins-version="2">
+	<plugin-info>
+		<description>${project.description}</description>
+		<version>${project.version}</version>
+		<vendor name="${project.organization.name}" url="${project.organization.url}" />
+		<param name="plugin-icon">images/pluginIcon.png</param>
+		<param name="plugin-logo">images/pluginLogo.png</param>
+		<param name="configure.url">/plugins/servlet/jira-plus-admin</param>
+	</plugin-info>
+	<xhtml-macro name="jira-plus" class="com.baloise.confluence.JiraPlusMacro"
+		key="jira-plus"
+		icon="/download/resources/${project.groupId}.${project.artifactId}/images/macro-icon.png">
+		<description>Advanced Jira reporting</description>
+		<category name="external-content" />
+		<parameters>
+			<parameter name="key" type="string" default="" />
+		</parameters>
+	</xhtml-macro>
+	<resource type="i18n" name="i18n" location="jira-plus" />
+	<resource type="download" name="images/" location="/images" />
+	<!-- add our web resources -->
+	<web-resource key="jira-plus-resources" name="jira-plus Web Resources">
+		<dependency>com.atlassian.auiplugin:ajs</dependency>
+		<resource type="download" name="jira-plus.css" location="/css/jira-plus.css" />
+		<resource type="download" name="jira-plus.js" location="/js/jira-plus.js" />
+		<context>jira-plus</context>
+	</web-resource>
+	<web-resource name="Admin Web Resources" key="resources">
+		<dependency>com.atlassian.auiplugin:ajs</dependency>
+		<resource type="download" name="admin.js" location="/js/admin.js" />
+	</web-resource>
+	<component-import key="applicationLinkService"
+		interface="com.atlassian.applinks.api.ApplicationLinkService" />
+	<component-import key="confluence.extra.jira"
+		interface="com.atlassian.confluence.extra.jira.JiraIssuesManager" />
+	<component-import key="userManager"
+		interface="com.atlassian.sal.api.user.UserManager" />
+	<component-import key="templateRenderer"
+		interface="com.atlassian.templaterenderer.TemplateRenderer" />
+	<component-import key="loginUriProvider"
+		interface="com.atlassian.sal.api.auth.LoginUriProvider" />
+	<component-import key="applicationProperties"
+		interface="com.atlassian.sal.api.ApplicationProperties" />
+	<component-import key="pluginSettingsFactory"
+		interface="com.atlassian.sal.api.pluginsettings.PluginSettingsFactory" />
+	<component-import key="transactionTemplate"
+		interface="com.atlassian.sal.api.transaction.TransactionTemplate" />
 
-  <resource type="i18n" name="i18n" location="jira-plus"/>
-  <resource type="download" name="images/" location="/images"/>
-  
-  <!-- add our web resources -->
-  <web-resource key="jira-plus-resources" name="jira-plus Web Resources">
-    <dependency>com.atlassian.auiplugin:ajs</dependency>
-    <resource type="download" name="jira-plus.css" location="/css/jira-plus.css"/>
-    <resource type="download" name="jira-plus.js" location="/js/jira-plus.js"/>
-    <context>jira-plus</context>
-  </web-resource>
 
-  <component-import key="applicationLinkService" interface="com.atlassian.applinks.api.ApplicationLinkService" />
-  <component-import key="confluence.extra.jira" interface="com.atlassian.confluence.extra.jira.JiraIssuesManager"/>
-  
+	<template-context-item key="applicationPropertiesContextItem"
+		component-ref="applicationProperties" context-key="applicationProperties"
+		name="Application Properties Context Item" />
+	<servlet name="Jira Plus Admin Servlet" i18n-name-key="jira-plus-admin-servlet.name"
+		key="jira-plus-admin-servlet" class="com.baloise.confluence.servlet.JiraPlusAdminServlet">
+		<description key="jira-plus-admin-servlet.description">The Jira Plus Admin Servlet Plugin
+		</description>
+		<url-pattern>/jira-plus-admin</url-pattern>
+	</servlet>
+
+	<web-item key="conf-menu-item" name="JiraPlus Admin"
+		section="system.admin/configuration" weight="10">
+		<description>Link to JiraPlus admin page.</description>
+		<label key="jiraplus.admin.label" />
+		<link linkId="jiraplus-admin-link">/plugins/servlet/jira-plus-admin</link>
+	</web-item>
+
+	<rest name="Jira Plus Config" i18n-name-key="jira-plus-config.name"
+		key="jira-plus-config" path="/jiraplusconfig" version="1.0">
+		<description key="jira-plus-config.description">The Jira Plus Config Plugin</description>
+	</rest>
 </atlassian-plugin>

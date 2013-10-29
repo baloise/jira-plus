@@ -23,15 +23,23 @@ import com.atlassian.confluence.extra.jira.JiraIssuesManager.Channel;
 import com.atlassian.confluence.macro.Macro;
 import com.atlassian.confluence.macro.MacroExecutionException;
 import com.atlassian.confluence.xhtml.api.XhtmlContent;
+import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
+import com.atlassian.sal.api.transaction.TransactionTemplate;
+import com.baloise.confluence.rest.JiraPlusConfig;
+import com.baloise.confluence.rest.JiraPlusConfigModel;
 
 public class JiraPlusMacro implements Macro {
 
 	private JiraIssuesManager jiraIssuesManager;
 	private ApplicationLinkService applicationLinkService;
+	private PluginSettingsFactory pluginSettingsFactory;
+	private TransactionTemplate transactionTemplate;
 
-	public JiraPlusMacro(XhtmlContent xhtmlContent, JiraIssuesManager jiraIssuesManager, ApplicationLinkService applicationLinkService){
+	public JiraPlusMacro(XhtmlContent xhtmlContent, JiraIssuesManager jiraIssuesManager, ApplicationLinkService applicationLinkService, PluginSettingsFactory pluginSettingsFactory, TransactionTemplate transactionTemplate){
 		this.jiraIssuesManager = jiraIssuesManager;
 		this.applicationLinkService = applicationLinkService;
+		this.pluginSettingsFactory = pluginSettingsFactory;
+		this.transactionTemplate = transactionTemplate;
 	}
 	
 	@Override
@@ -89,7 +97,8 @@ public class JiraPlusMacro implements Macro {
 			e.printStackTrace();
 			builder.append(e.getMessage());
 		} 
-		
+		JiraPlusConfigModel config = JiraPlusConfig.loadConfig(transactionTemplate, pluginSettingsFactory);
+		builder.append("<br/>Name: "+config.getName());
 		builder.append("</p>");
         return builder.toString();
 	}
