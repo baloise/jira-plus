@@ -21,18 +21,18 @@ import org.jdom.filter.Filter;
 import com.atlassian.applinks.api.ApplicationLink;
 import com.atlassian.applinks.api.ApplicationLinkService;
 import com.atlassian.confluence.content.render.xhtml.ConversionContext;
+import com.atlassian.confluence.content.render.xhtml.Renderer;
 import com.atlassian.confluence.extra.jira.JiraIssuesManager;
 import com.atlassian.confluence.extra.jira.JiraIssuesManager.Channel;
 import com.atlassian.confluence.macro.Macro;
 import com.atlassian.confluence.macro.MacroExecutionException;
+import com.atlassian.confluence.setup.settings.SettingsManager;
 import com.atlassian.confluence.xhtml.api.XhtmlContent;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.sal.api.transaction.TransactionTemplate;
-import com.atlassian.templaterenderer.RenderingException;
 import com.atlassian.templaterenderer.TemplateRenderer;
 import com.baloise.confluence.rest.JiraPlusConfig;
 import com.baloise.confluence.rest.JiraPlusConfigModel;
-import com.atlassian.confluence.content.render.xhtml.Renderer;
 
 public class JiraPlusMacro implements Macro {
 
@@ -42,14 +42,18 @@ public class JiraPlusMacro implements Macro {
 	private TransactionTemplate transactionTemplate;
 	private Renderer renderer;
 	private TemplateRenderer templateRenderer;
+	private SettingsManager settingsManager;
 
-	public JiraPlusMacro(XhtmlContent xhtmlContent, JiraIssuesManager jiraIssuesManager, ApplicationLinkService applicationLinkService, PluginSettingsFactory pluginSettingsFactory, TransactionTemplate transactionTemplate, Renderer renderer, TemplateRenderer templateRenderer){
+	public JiraPlusMacro(XhtmlContent xhtmlContent, JiraIssuesManager jiraIssuesManager, ApplicationLinkService applicationLinkService, 
+			PluginSettingsFactory pluginSettingsFactory, TransactionTemplate transactionTemplate, Renderer renderer, TemplateRenderer templateRenderer, 
+			SettingsManager settingsManager){
 		this.jiraIssuesManager = jiraIssuesManager;
 		this.applicationLinkService = applicationLinkService;
 		this.pluginSettingsFactory = pluginSettingsFactory;
 		this.transactionTemplate = transactionTemplate;
 		this.renderer = renderer;
 		this.templateRenderer = templateRenderer;
+		this.settingsManager = settingsManager;
 	}
 	
 	@Override
@@ -85,9 +89,10 @@ public class JiraPlusMacro implements Macro {
 		List<String> columns = Arrays.asList("title", "status","summary", "issuelinks");
 		String url = buildLinkedIssuesJiraUrl(key, applink);
 		try {
-			Channel channel = jiraIssuesManager.retrieveXMLAsChannel(url, columns, applink, false, false);
+			Channel channel = jiraIssuesManager.retrieveXMLAsChannel(url, columns, applink, false, true);
 			
 			Map<String, Element> items = readItems(channel);
+			builder.append(items.size()+" issues<br/>");
 			Element issue = items.get(key);
 			Map<String, Set<String>> links = getLinks(issue);
 			builder.append("<b>");
@@ -112,7 +117,16 @@ public class JiraPlusMacro implements Macro {
 		} 
 		JiraPlusConfigModel config = JiraPlusConfig.loadConfig(transactionTemplate, pluginSettingsFactory);
 		builder.append("<br/>Name from plugin config : "+config.getName());
+		/*
 		builder.append("<br/><progress value='50' max='70' ></progress>");
+		builder.append("<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" height=\"190\">\n" + 
+				"   <polygon points=\"100,10 40,180 190,60 10,60 160,180\"\n" + 
+				"   style=\"fill:lime;stroke:purple;stroke-width:5;fill-rule:evenodd;\">\n" + 
+				"</svg>");
+		*/
+		Random rand = new Random(System.currentTimeMillis());
+		int progress = rand.nextInt(50)+25;
+		builder.append("<br/><img src='"+settingsManager.getGlobalSettings().getBaseUrl()+"/rest/progress/1.0/progress/"+progress+"' />");
 		builder.append("</p>");
         return builder.toString();
 	}
@@ -221,7 +235,7 @@ public class JiraPlusMacro implements Macro {
 	
 	private String buildLinkedIssuesJiraUrl(String key, ApplicationLink applink)
     {
-        return buildJiraUrl("issue in linkedIssuesFromQuery('key = " + key + "') or key = " + key + "", applink);
+		return buildJiraUrl("issue in linkedIssuesFromQuery(\"issue in linkedIssuesFromQuery('key = " + key + "', 'Child', 'Outward', 3) or key = " + key + "\")", applink);
     }
 
 	private String buildJiraUrl(String query, ApplicationLink applink) {
