@@ -17,6 +17,7 @@ import java.util.Set;
 
 import org.jdom.Element;
 import org.jdom.filter.Filter;
+import org.jdom.output.XMLOutputter;
 
 import com.atlassian.applinks.api.ApplicationLink;
 import com.atlassian.applinks.api.ApplicationLinkService;
@@ -86,30 +87,84 @@ public class JiraPlusMacro implements Macro {
             return builder.toString();
         } 
 		
-		List<String> columns = Arrays.asList("title", "status","summary", "issuelinks");
+		List<String> columns = Arrays.asList("title", "status","summary", "issuelinks", "timetracking", "type");
+				//"timeoriginalestimate", "timeestimate");
 		String url = buildLinkedIssuesJiraUrl(key, applink);
 		try {
-			Channel channel = jiraIssuesManager.retrieveXMLAsChannel(url, columns, applink, false, true);
-			
+			Channel channel = jiraIssuesManager.retrieveXMLAsChannel(url, columns, applink, false, false);
+//			String xml = jiraIssuesManager.retrieveXMLAsString(url, columns, applink, false, false);
 			Map<String, Element> items = readItems(channel);
+			
 			builder.append(items.size()+" issues<br/>");
 			Element issue = items.get(key);
-			Map<String, Set<String>> links = getLinks(issue);
 			builder.append("<b>");
 			render(builder, issue);
 			builder.append("</b>");
-			for (String linkType : links.keySet()) {
-				renderSection(builder, linkType);
-				for (String linkedKey : links.get(linkType)) {
-					render(builder, items.get(linkedKey));
+			
+			Map<String, Map<String, Integer>> type2status2count = new HashMap<String, Map<String,Integer>>(){
+				@Override
+				public Map<String, Integer> get(Object key) {
+					Map<String, Integer> ret = super.get(key);
+					if(ret == null) {
+						ret = new HashMap<String, Integer>(){
+							public Integer get(Object key) {
+								Integer ret = super.get(key);
+								return ret == null ? 0 : ret;
+							};
+						};
+						put((String) key, ret);
+					}
+					return ret;
 				}
+			};
+			Map<String, Set<String>> type2ids = new HashMap<String, Set<String>>(){
+				@Override
+				public Set<String> get(Object key) {
+					Set<String> ret = super.get(key);
+					if(ret == null) {
+						ret = new HashSet<String>();
+						put((String) key, ret);
+					}
+					return ret;
+				}
+			};
+			int sumOriginal = 0;
+			int sumRemaining = 0;
+			int sumSpent = 0;
+			for (Entry<String, Element> entry : items.entrySet()) {
+				Element e = entry.getValue();
+				sumOriginal += getSeconds(e, "timeoriginalestimate");
+				sumRemaining += getSeconds(e, "timeestimate");
+				sumSpent += getSeconds(e, "timespent");
+				
+				String type = e.getChildText("type");
+				Map<String, Integer> status2count = type2status2count.get(type);
+				String status = e.getChildText("status");
+				status2count.put(status, status2count.get(status) +1);
+				
+				type2ids.get(type).add(entry.getKey());
+			}
+			Map<String, Integer> effort = new HashMap<String, Integer>();
+			effort.put("original estimate", sumOriginal/3600);
+			effort.put("remaing estimate", sumRemaining/3600);
+			effort.put("spent", sumSpent/3600);
+			
+			builder.append(pieChart("Overall progress", effort, context ));
+			
+			
+			for (  Entry<String, Set<String>> e : type2ids.entrySet()) {
+				String type = e.getKey();
+				renderSection(builder, type);
+				for (String id : e.getValue()) {
+					render(builder, items.get(id));
+				}
+				Map<String, Integer> data = type2status2count.get(type);
+				builder.append(pieChart(type, data, context ));
 			}
 			
-			Map<String, Integer> data = new HashMap<String, Integer>();
-			for (Entry<String, Set<String>> entry : links.entrySet()) {
-				data.put(entry.getKey(), entry.getValue().size());
-			}
-			builder.append(pieChart("", data, context ));
+			
+			
+			
 			 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -132,6 +187,14 @@ public class JiraPlusMacro implements Macro {
 	}
 
 	
+	private int getSeconds(Element e, String time) {
+		try {
+		return Integer.parseInt(e.getChild(time).getAttributeValue("seconds"));
+		} catch (Exception ex) {
+			return 0;
+		}
+	}
+	
 	String confluenceLink(String href, String text) {
 		return "<ac:link><ri:page ri:content-title=\""+href+"\" /><ac:plain-text-link-body><![CDATA["+text+"]]></ac:plain-text-link-body></ac:link>";
 	}
@@ -146,7 +209,7 @@ public class JiraPlusMacro implements Macro {
 	}
 	
 	private void renderSection(StringBuilder builder, String section) {
-		builder.append("<i>");
+		builder.append("<br/><i>");
 		builder.append(section);
 		builder.append("</i><br/>");
 	}
